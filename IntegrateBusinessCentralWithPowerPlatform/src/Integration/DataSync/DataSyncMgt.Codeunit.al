@@ -1,11 +1,11 @@
-codeunit 50105 "Data Sync Mgt"
+codeunit 50105 "BCT Data Sync Mgt"
 {
     //coupling
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"CRM Setup Defaults", 'OnGetCDSTableNo', '', false, false)]
     local procedure HandleOnGetCDSTableNo(BCTableNo: Integer; var CDSTableNo: Integer; var Handled: Boolean)
     begin
         if BCTableNo = Database::"BCT Vehicle" then begin
-            //CDSTableNo := integration table number here;
+            CDSTableNo := Database::"CDS crf83_Vehicle";
             Handled := true;
         end;
     end;
@@ -13,7 +13,8 @@ codeunit 50105 "Data Sync Mgt"
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Lookup CRM Tables", 'OnLookupCRMTables', '', false, false)]
     local procedure HandleOnLookupCRMTables(CRMTableID: Integer; NAVTableId: Integer; SavedCRMId: Guid; var CRMId: Guid; IntTableFilter: Text; var Handled: Boolean)
     begin
-        // Check if the CRM table is the one we are interested in and add the logic accordingly (using the LookupVehicle procedure as an example)
+        if CRMTableID = Database::"CDS crf83_Vehicle" then
+            Handled := LookupVehicle(SavedCRMId, CRMId, IntTableFilter);
     end;
 
     local procedure LookupVehicle(SavedCRMId: Guid; var CRMId: Guid; IntTableFilter: Text): Boolean
@@ -47,19 +48,31 @@ codeunit 50105 "Data Sync Mgt"
     var
         CRMSetupDefaults: Codeunit "CRM Setup Defaults";
     begin
-        CRMSetupDefaults.AddEntityTableMapping('vehicle_entity_name', Database::"BCT Vehicle", TempNameValueBuffer);
-        //AddEntityTableMapping for integration table
+        CRMSetupDefaults.AddEntityTableMapping('crf83_vehicle', Database::"BCT Vehicle", TempNameValueBuffer);
+        CRMSetupDefaults.AddEntityTableMapping('crf83_vehicle', Database::"CDS crf83_Vehicle", TempNameValueBuffer);
     end;
 
-    procedure HandleOnBeforeResetConfiguration(CDSConnectionSetup: Record "CDS Connection Setup")
+    procedure HandleOnBeforeResetConfiguration()
     var
         IntegrationTableMapping: Record "Integration Table Mapping";
         IntegrationFieldMapping: Record "Integration Field Mapping";
+        DataverseVehicle: Record "CDS crf83_Vehicle";
         Vehicle: Record "BCT Vehicle";
     begin
-        // insert integration table mapping
+        InsertIntegrationTableMapping(
+            IntegrationTableMapping, 'VEHICLE-VEHICLE',
+            Database::"BCT Vehicle", Database::"CDS crf83_Vehicle",
+            DataverseVehicle.FieldNo(crf83_VehicleId), DataverseVehicle.FieldNo(ModifiedOn),
+            '', '', true);
 
-        //insert integration field mappings
+        InsertIntegrationFieldMapping('VEHICLE-VEHICLE', Vehicle.FieldNo("No."), DataverseVehicle.FieldNo(crf83_Number), IntegrationFieldMapping.Direction::Bidirectional, '', true, false);
+        InsertIntegrationFieldMapping('VEHICLE-VEHICLE', Vehicle.FieldNo(Make), DataverseVehicle.FieldNo(crf83_Make), IntegrationFieldMapping.Direction::Bidirectional, '', true, false);
+        InsertIntegrationFieldMapping('VEHICLE-VEHICLE', Vehicle.FieldNo(Model), DataverseVehicle.FieldNo(crf83_Model), IntegrationFieldMapping.Direction::Bidirectional, '', true, false);
+        InsertIntegrationFieldMapping('VEHICLE-VEHICLE', Vehicle.FieldNo(Type), DataverseVehicle.FieldNo(crf83_Type), IntegrationFieldMapping.Direction::Bidirectional, '', true, false);
+        InsertIntegrationFieldMapping('VEHICLE-VEHICLE', Vehicle.FieldNo("Manufacturing Year"), DataverseVehicle.FieldNo(crf83_YearofManufacturing), IntegrationFieldMapping.Direction::Bidirectional, '', true, false);
+        InsertIntegrationFieldMapping('VEHICLE-VEHICLE', Vehicle.FieldNo(Mileage), DataverseVehicle.FieldNo(crf83_Mileage), IntegrationFieldMapping.Direction::Bidirectional, '', true, false);
+        InsertIntegrationFieldMapping('VEHICLE-VEHICLE', Vehicle.FieldNo("Fuel Type"), DataverseVehicle.FieldNo(crf83_Fuel), IntegrationFieldMapping.Direction::Bidirectional, '', true, false);
+        InsertIntegrationFieldMapping('VEHICLE-VEHICLE', Vehicle.FieldNo("License Plate"), DataverseVehicle.FieldNo(crf83_LicensePlate), IntegrationFieldMapping.Direction::Bidirectional, '', true, false);
     end;
 
     local procedure InsertIntegrationTableMapping(var IntegrationTableMapping: Record "Integration Table Mapping"; MappingName: Code[20]; TableNo: Integer; IntegrationTableNo: Integer; IntegrationTableUIDFieldNo: Integer; IntegrationTableModifiedFieldNo: Integer; TableConfigTemplateCode: Code[10]; IntegrationTableConfigTemplateCode: Code[10]; SynchOnlyCoupledRecords: Boolean)
