@@ -19,4 +19,16 @@ codeunit 50104 "Event Subscribers"
 
         //Vehicle loaned business event here
     end;
+
+    [EventSubscriber(ObjectType::Table, Database::"Vendor Bank Account", 'OnBeforeValidateIBAN', '', false, false)]
+    local procedure OnBeforeValidateIBAN(var VendorBankAccount: Record "Vendor Bank Account"; var xVendorBankAccount: Record "Vendor Bank Account"; var IsHandled: Boolean)
+    begin
+        if xVendorBankAccount.IBAN = '' then
+            exit;
+
+        if VendorBankAccount.IBAN = xVendorBankAccount.IBAN then
+            exit;
+
+        //Vendor IBAN changed business event here
+    end;
 }
