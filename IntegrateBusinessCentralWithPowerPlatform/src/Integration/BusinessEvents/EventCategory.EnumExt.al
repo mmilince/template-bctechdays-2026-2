@@ -4,4 +4,8 @@ enumextension 50100 "BCT Event Category" extends EventCategory
     {
         Caption = 'Loans';
     }
+    value(50101; "Vendor Events")
+    {
+        Caption = 'Vendor Events';
+    }
 }
